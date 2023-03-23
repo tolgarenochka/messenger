@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	cors "github.com/adhityaramadhanus/fasthttpcors"

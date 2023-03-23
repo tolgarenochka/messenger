@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"messenger/services/api/internal/server"
+	"messenger/services/api/internal/handlers"
 	"os/signal"
 	"syscall"
 )
@@ -15,7 +15,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	s := server.NewServer()
+	s := handlers.NewServer()
 	s.Init()
 
 	err := s.Run(ctx)

@@ -1,4 +1,4 @@
-package database
+package db_wizard
 
 import (
 	"context"
@@ -52,4 +52,19 @@ WHERE user_1 = ? or user_2 = ?;`)
 	}
 
 	return dialogs, nil
+}
+
+func (s *Store) Auth(mail string, pas string) (models.User, error) {
+	//user := make([]*models.User, 0)
+	user := models.User{}
+
+	query := s.conn.Rebind(`SELECT * from "user" WHERE mail = ? and pas = ?;`)
+
+	err := s.conn.QueryRowx(query, mail, pas).StructScan(&user)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return user, err
+	}
+
+	return user, nil
 }

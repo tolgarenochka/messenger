@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"context"
@@ -30,10 +30,10 @@ func NewServer() *Server {
 	return &Server{
 		server: &HTTPServer{
 			serverHTTP: &http.Server{
-				Name: "http server",
+				Name: "http handlers",
 			},
 			serverHTTPS: &http.Server{
-				Name: "https server",
+				Name: "https handlers",
 			},
 		},
 	}

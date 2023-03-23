@@ -1,17 +1,17 @@
 package models
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type User struct {
 	Id         int64  `json:"id" db:"id"`
-	Name       string `json:"name" db:"name"`
-	Surname    string `json:"surname" db:"surname"`
-	Patronymic string `json:"patronymic" db:"patronymic"`
-
-	Email    string `json:"email" db:"email"`
-	Password string `json:"password" db:"password"`
-
-	Online bool `json:"online" db:"online"`
+	FirstName  string `json:"first_name" db:"first_name"`
+	SecondName string `json:"second_name" db:"second_name"`
+	ThirdName  string `json:"third_name" db:"third_name"`
+	Mail       string `json:"mail" db:"mail"`
+	Password   string `json:"pas" db:"pas"`
+	Photo      string `json:"photo,omitempty" db:"photo"`
 }
 
 func (u *User) Marshal() ([]byte, error) {
