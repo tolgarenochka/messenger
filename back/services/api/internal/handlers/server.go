@@ -39,13 +39,16 @@ func NewServer() *Server {
 	}
 }
 
-func (s *Server) Run(ctx context.Context) error {
+func (s *Server) Run(ctx context.Context, cert, key string) error {
 	s.eg, s.ctx = errgroup.WithContext(ctx)
 
 	s.eg.Go(func() error {
 		return s.server.serverHTTP.ListenAndServe("localhost:8080")
 	})
 	s.eg.Go(func() error {
+		if err := s.server.serverHTTPS.AppendCert(cert, key); err != nil {
+			return err
+		}
 		return s.server.serverHTTPS.ListenAndServeTLS("localhost:8080", "", "")
 	})
 

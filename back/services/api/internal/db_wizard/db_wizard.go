@@ -5,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
+	"log"
 	"messenger/services/api/pkg/helpers/models"
 )
 
@@ -61,6 +62,28 @@ func (s *Store) Auth(mail string, pas string) (models.User, error) {
 	query := s.conn.Rebind(`SELECT * from "user" WHERE mail = ? and pas = ?;`)
 
 	err := s.conn.QueryRowx(query, mail, pas).StructScan(&user)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return user, err
+	}
+
+	return user, nil
+}
+
+func Auth(mail string, pas string) (models.User, error) {
+	//user := make([]*models.User, 0)
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return models.User{}, err
+	}
+
+	defer func() {log.Print(db.Quit())}()
+
+	user := models.User{}
+
+	query := db.conn.Rebind(`SELECT * from "user" WHERE mail = ? and pas = ?;`)
+	err = db.conn.QueryRowx(query, mail, pas).StructScan(&user)
 	if err != nil {
 		fmt.Printf(err.Error())
 		return user, err

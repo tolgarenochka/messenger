@@ -21,6 +21,9 @@ type AuthData struct {
 	Pas  string `json:"pas"`
 }
 
+//map with session user_id:session_token
+var UserToken = map[int64]string{}
+
 func (s *Server) auth(ctx *http.RequestCtx) {
 	log.Println("Auth")
 	authData := AuthData{}
@@ -32,38 +35,26 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 		return
 	}
 
-	store, err := db_wizard.NewConnect()
-	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
-		return
-	}
-
-	user := models.User{}
-	user, err = store.Auth(authData.Mail, authData.Pas)
+	user, err := db_wizard.Auth(authData.Mail, authData.Pas)
 	if err != nil {
 		log.Print("Failed to do sql req. Reason: ", err.Error())
 		if err == sql.ErrNoRows {
-			helpers.Respond(ctx, []byte("no auth"), http.StatusUnauthorized)
+			helpers.Respond(ctx, "no auth", http.StatusUnauthorized)
 			return
 		}
 		helpers.RespondError(ctx, models.MakeErrorResponse(err.Error(), http.StatusBadRequest))
 		return
 	}
+	//
+	//token := "asdasdasdasd"
+	//
+	//if token, ok := UserToken[user.Id]; ok {
+	//	TokenWebSockets[token].Close()
+	//}
+	//
+	//UserToken[user.Id] = token
+	//
+	//TokenWebSockets[token] = NewWebsocket(ctx, ctx.Request)
 
-	data := make([]byte, 0)
-
-	data, err = json.Marshal(&user)
-	if err != nil {
-		log.Print("Failed me. Reason: ", err.Error())
-		helpers.RespondError(ctx, models.MakeErrorResponse(err.Error(), http.StatusBadRequest))
-		return
-	}
-
-	_, err = ctx.Write(data)
-	if err != nil {
-		log.Print("Failed to write data to resp. Reason: ", err.Error())
-		helpers.RespondError(ctx, models.MakeErrorResponse(err.Error(), http.StatusBadRequest))
-		return
-	}
-
+	helpers.Respond(ctx, user, http.StatusOK)
 }

@@ -1,24 +1,27 @@
 package http
 
 import (
+	"encoding/json"
 	"github.com/valyala/fasthttp"
 	"log"
 	"messenger/services/api/pkg/helpers/models"
 	"net/http"
 )
 
-func Respond(ctx *fasthttp.RequestCtx, message []byte, code int) {
-	ctx.Response.Header.SetContentLength(len(message))
-	ctx.SetContentType("application/json")
-
-	_, err := ctx.Write(message)
+func Respond(ctx *fasthttp.RequestCtx, data interface{}, statusCode int) {
+	bytes, err := json.Marshal(data)
 	if err != nil {
-		log.Print("Failed send respond. Reason: ", err.Error())
-
-		ctx.SetStatusCode(http.StatusInternalServerError)
+		log.Print("Failed to marshal error data. Reason:", err.Error())
 	}
 
-	ctx.SetStatusCode(code)
+	ctx.Response.Header.Set("Content-Type", "application/json")
+
+	_, err = ctx.Write(bytes)
+	if err != nil {
+		log.Print("Failed to marshal error data. Reason:", err.Error())
+	}
+
+	ctx.SetStatusCode(statusCode)
 }
 
 func RespondError(ctx *fasthttp.RequestCtx, errorObject *models.Error) {
