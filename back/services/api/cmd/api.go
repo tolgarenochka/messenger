@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"messenger/services/api/internal/handlers"
-	"os"
+	_ "os"
 	"os/signal"
 	"syscall"
 )

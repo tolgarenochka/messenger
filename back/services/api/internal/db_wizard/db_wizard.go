@@ -27,58 +27,14 @@ func (s *Store) Quit() error {
 	return s.conn.Close()
 }
 
-func (s *Store) GetDialogListByUserId(id int) ([]*models.Dialog, error) {
-	dialogs := make([]*models.Dialog, 0)
-
-	query := s.conn.Rebind(`SELECT text as last_mes_text FROM dialog
-    JOIN "message" m on m.id = dialog.last_mes
-WHERE user_1 = ? or user_2 = ?;`)
-
-	rows, err := s.conn.Query(query, id, id)
-	if err != nil {
-		fmt.Printf(err.Error())
-	}
-
-	for rows.Next() {
-		var lastMessage string
-		err = rows.Scan(&lastMessage)
-		if err != nil {
-			fmt.Printf(err.Error())
-			return nil, err
-		}
-
-		singleDialog := models.NewDialog()
-		singleDialog.UpdateLastMes(lastMessage)
-		dialogs = append(dialogs, singleDialog)
-	}
-
-	return dialogs, nil
-}
-
-func (s *Store) Auth(mail string, pas string) (models.User, error) {
-	//user := make([]*models.User, 0)
-	user := models.User{}
-
-	query := s.conn.Rebind(`SELECT * from "user" WHERE mail = ? and pas = ?;`)
-
-	err := s.conn.QueryRowx(query, mail, pas).StructScan(&user)
-	if err != nil {
-		fmt.Printf(err.Error())
-		return user, err
-	}
-
-	return user, nil
-}
-
 func Auth(mail string, pas string) (models.User, error) {
-	//user := make([]*models.User, 0)
 	db, err := NewConnect()
 	if err != nil {
 		log.Print("Failed connect to db. Reason: ", err.Error())
 		return models.User{}, err
 	}
 
-	defer func() {log.Print(db.Quit())}()
+	defer func() { log.Print(db.Quit()) }()
 
 	user := models.User{}
 
@@ -90,4 +46,30 @@ func Auth(mail string, pas string) (models.User, error) {
 	}
 
 	return user, nil
+}
+
+// UpdatePhoto TODO: photo format? is base64 ok for front?
+func UpdatePhoto(photo string, id int) (int64, error) {
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return 0, err
+	}
+
+	defer func() { log.Print(db.Quit()) }()
+
+	query := db.conn.Rebind(`UPDATE "user" SET photo = ? WHERE id = ?;`)
+	res, err := db.conn.Exec(query, photo, id)
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return 0, err
+	}
+
+	count, err := res.RowsAffected()
+	if err != nil {
+		log.Print("Failed connect to count result rows. Reason: ", err.Error())
+		return 0, err
+	}
+
+	return count, nil
 }

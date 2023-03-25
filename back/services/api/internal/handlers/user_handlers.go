@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	cors "github.com/adhityaramadhanus/fasthttpcors"
 	"github.com/fasthttp/router"
@@ -9,11 +11,11 @@ import (
 	"log"
 	"messenger/services/api/internal/db_wizard"
 	helpers "messenger/services/api/pkg/helpers/http"
-	"messenger/services/api/pkg/helpers/models"
 )
 
 func (s *Server) UserRouter(r *router.Router, c *cors.CorsHandler) {
 	r.POST("/auth", c.CorsMiddleware(s.auth))
+	r.POST("/updatePhoto", c.CorsMiddleware(s.updatePhoto))
 }
 
 type AuthData struct {
@@ -21,7 +23,15 @@ type AuthData struct {
 	Pas  string `json:"pas"`
 }
 
-//map with session user_id:session_token
+func GenerateSecureToken(length int) string {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b)
+}
+
+// map with session user_id:session_token
 var UserToken = map[int64]string{}
 
 func (s *Server) auth(ctx *http.RequestCtx) {
@@ -31,7 +41,7 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 	if err := json.Unmarshal(ctx.PostBody(), &authData); err != nil {
 		log.Print("Failed unmarshal user data. Reason: ", err.Error())
 
-		helpers.RespondError(ctx, models.MakeErrorResponse(err.Error(), http.StatusBadRequest))
+		helpers.Respond(ctx, "Unmarshal error", http.StatusBadRequest)
 		return
 	}
 
@@ -39,22 +49,54 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 	if err != nil {
 		log.Print("Failed to do sql req. Reason: ", err.Error())
 		if err == sql.ErrNoRows {
-			helpers.Respond(ctx, "no auth", http.StatusUnauthorized)
+			helpers.Respond(ctx, "not valid mail or pas", http.StatusUnauthorized)
 			return
 		}
-		helpers.RespondError(ctx, models.MakeErrorResponse(err.Error(), http.StatusBadRequest))
+		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
 		return
 	}
-	//
-	//token := "asdasdasdasd"
-	//
+
+	token := GenerateSecureToken(20)
+
+	// TODO: add ws
 	//if token, ok := UserToken[user.Id]; ok {
 	//	TokenWebSockets[token].Close()
 	//}
 	//
-	//UserToken[user.Id] = token
-	//
+	UserToken[user.Id] = token
 	//TokenWebSockets[token] = NewWebsocket(ctx, ctx.Request)
 
-	helpers.Respond(ctx, user, http.StatusOK)
+	helpers.Respond(ctx, token, http.StatusOK)
+}
+
+// NewPhoto TODO: front gives us id? or token for getting id from UserToken?
+type NewPhoto struct {
+	Photo string `json:"photo"`
+	Id    int    `json:"id"`
+}
+
+func (s *Server) updatePhoto(ctx *http.RequestCtx) {
+	log.Println("Update photo")
+	newPhoto := NewPhoto{}
+
+	if err := json.Unmarshal(ctx.PostBody(), &newPhoto); err != nil {
+		log.Print("Failed unmarshal user data. Reason: ", err.Error())
+
+		helpers.Respond(ctx, "Unmarshal error", http.StatusBadRequest)
+		return
+	}
+
+	count, err := db_wizard.UpdatePhoto(newPhoto.Photo, newPhoto.Id)
+	if err != nil {
+		log.Print("Failed to do sql req. Reason: ", err.Error())
+		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
+		return
+	}
+	if count == 0 {
+		helpers.Respond(ctx, "can't update photo", http.StatusBadRequest)
+		return
+	}
+
+	helpers.Respond(ctx, "photo was successfully updated", http.StatusOK)
+	return
 }
