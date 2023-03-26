@@ -16,6 +16,7 @@ import (
 func (s *Server) UserRouter(r *router.Router, c *cors.CorsHandler) {
 	r.POST("/auth", c.CorsMiddleware(s.auth))
 	r.POST("/updatePhoto", c.CorsMiddleware(s.updatePhoto))
+	r.GET("/usersList", c.CorsMiddleware(s.usersList))
 }
 
 type AuthData struct {
@@ -98,5 +99,19 @@ func (s *Server) updatePhoto(ctx *http.RequestCtx) {
 	}
 
 	helpers.Respond(ctx, "photo was successfully updated", http.StatusOK)
+	return
+}
+
+func (s *Server) usersList(ctx *http.RequestCtx) {
+	log.Println("Get users list")
+
+	users, err := db_wizard.GetUsersList()
+	if err != nil {
+		log.Print("Failed to do sql req. Reason: ", err.Error())
+		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
+		return
+	}
+
+	helpers.Respond(ctx, users, http.StatusOK)
 	return
 }

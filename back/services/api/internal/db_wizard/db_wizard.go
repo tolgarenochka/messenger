@@ -73,3 +73,33 @@ func UpdatePhoto(photo string, id int) (int64, error) {
 
 	return count, nil
 }
+
+func GetUsersList() ([]models.User, error) {
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return nil, err
+	}
+
+	defer func() { log.Print(db.Quit()) }()
+
+	users := make([]models.User, 0)
+
+	query := db.conn.Rebind(`SELECT * from "user";`)
+	rows, err := db.conn.Queryx(query)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return nil, err
+	}
+	for rows.Next() {
+		user := models.User{}
+		err = rows.StructScan(&user)
+		if err != nil {
+			fmt.Printf(err.Error())
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
