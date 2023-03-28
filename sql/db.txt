@@ -1,0 +1,71 @@
+create sequence table_id_seq;
+
+create sequence mes_id_seq;
+
+create sequence file_id_seq;
+
+create sequence dialog_id_seq;
+
+create table "user"
+(
+    id          integer default nextval('table_id_seq'::regclass) not null
+        constraint user_id
+            primary key,
+    mail        text                                              not null,
+    pas         text                                              not null,
+    photo       varchar(100)                                      not null,
+    first_name  text                                              not null,
+    second_name text                                              not null,
+    third_name  text
+);
+
+create table message
+(
+    id         integer default nextval('mes_id_seq'::regclass) not null
+        constraint message_id
+            primary key,
+    text       text,
+    sender     integer                                         not null
+        constraint sender_id
+            references "user",
+    recipient  integer                                         not null
+        constraint recipient_id
+            references "user",
+    is_deleted boolean default false                           not null,
+    is_read    boolean default false                           not null,
+    dialog_id  integer,
+    time       timestamp
+);
+
+create table dialog
+(
+    user_1          integer                                            not null
+        constraint dialog_user_id
+            references "user",
+    user_2          integer                                            not null
+        constraint dialog_dialog_id
+            references "user",
+    last_mes        integer
+        constraint dialog_message_id
+            references message,
+    last_mes_sender integer,
+    id              integer default nextval('dialog_id_seq'::regclass) not null
+        constraint id
+            primary key
+);
+
+alter table message
+    add constraint message_dialog_id_fk
+        foreign key (dialog_id) references dialog;
+
+create table file
+(
+    id     integer default nextval('file_id_seq'::regclass) not null
+        constraint file_pk
+            primary key,
+    mes_id integer                                          not null
+        constraint message_id
+            references message,
+    path   varchar(100),
+    name   varchar(100)                                     not null
+);
