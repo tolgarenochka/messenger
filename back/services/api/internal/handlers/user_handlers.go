@@ -32,7 +32,7 @@ func GenerateSecureToken(length int) string {
 	return hex.EncodeToString(b)
 }
 
-// map with session user_id:session_token
+// UserToken map with session user_id:session_token
 var UserToken = map[int64]string{}
 
 func (s *Server) auth(ctx *http.RequestCtx) {

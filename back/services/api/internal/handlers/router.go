@@ -10,6 +10,7 @@ func (s *Server) initRouter() *router.Router {
 	r := router.New()
 
 	s.UserRouter(r, c)
+	s.MesRouter(r, c)
 
 	return r
 }

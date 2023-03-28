@@ -1,17 +1,14 @@
 package models
 
 type Dialog struct {
-	lastMes string
-	//user    user.User
-	//mail       string
-}
-
-func NewDialog() *Dialog {
-	return &Dialog{
-		lastMes: "",
-	}
+	Id                  int    `json:"id" db:"id"`
+	LastMes             string `json:"last_mes" db:"last_mes"`
+	AreYouLastMesSender bool
+	FirstName           string
+	SecondName          string
+	ThirdName           string
 }
 
 func (d *Dialog) UpdateLastMes(mes string) {
-	d.lastMes = mes
+	d.LastMes = mes
 }

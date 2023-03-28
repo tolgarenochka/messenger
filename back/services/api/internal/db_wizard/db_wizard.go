@@ -103,3 +103,77 @@ func GetUsersList() ([]models.User, error) {
 
 	return users, nil
 }
+
+func GetDialogsList(id int) ([]models.Dialog, error) {
+	// TODO: пордумать
+	return nil, nil
+}
+
+func GetMessagesList(dialogId int) ([]models.Message, error) {
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return nil, err
+	}
+
+	mess := make([]models.Message, 0)
+
+	query := db.conn.Rebind(`SELECT message.id, time, text, sender, recipient from message join dialog d on
+message.dialog_id = d.id WHERE is_deleted = FALSE and d.id = ?
+                             ORDER BY time;`)
+	rows, err := db.conn.Queryx(query, dialogId)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return nil, err
+	}
+	for rows.Next() {
+		mes := models.Message{}
+		err = rows.StructScan(&mes)
+		if err != nil {
+			fmt.Printf(err.Error())
+			return nil, err
+		}
+		files, err := GetFilesList(mes.Id)
+		if err != nil {
+			fmt.Printf(err.Error())
+			return nil, err
+		}
+		mes.File = files
+
+		mess = append(mess, mes)
+	}
+
+	return mess, nil
+
+}
+
+func GetFilesList(mesId int64) ([]models.File, error) {
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return nil, err
+	}
+
+	defer func() { log.Print(db.Quit()) }()
+
+	files := make([]models.File, 0)
+
+	query := db.conn.Rebind(`SELECT path, name from file
+JOIN message m on m.id = file.mes_id WHERE m.id = ?;`)
+	rows, err := db.conn.Queryx(query, mesId)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return nil, err
+	}
+	for rows.Next() {
+		file := models.File{}
+		err = rows.StructScan(&file)
+		if err != nil {
+			fmt.Printf(err.Error())
+			return nil, err
+		}
+		files = append(files, file)
+	}
+
+	return files, nil
+}
