@@ -20,7 +20,6 @@ func Respond(ctx *fasthttp.RequestCtx, data interface{}, statusCode int) {
 	if err != nil {
 		log.Print("Failed to marshal error data. Reason:", err.Error())
 	}
-
 	ctx.SetStatusCode(statusCode)
 }
 

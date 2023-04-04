@@ -6,6 +6,7 @@ import (
 )
 
 func (s *Server) initRouter() *router.Router {
+
 	c := cors.DefaultHandler()
 	r := router.New()
 

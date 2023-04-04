@@ -41,7 +41,6 @@ func NewServer() *Server {
 
 func (s *Server) Run(ctx context.Context, cert, key string) error {
 	s.eg, s.ctx = errgroup.WithContext(ctx)
-
 	s.eg.Go(func() error {
 		return s.server.serverHTTP.ListenAndServe("localhost:8080")
 	})

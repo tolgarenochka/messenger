@@ -12,6 +12,7 @@ import (
 
 func (s *Server) MesRouter(r *router.Router, c *cors.CorsHandler) {
 	r.GET("/mesList", c.CorsMiddleware(s.mesList))
+	r.POST("/sendMes", c.CorsMiddleware(s.sendMes))
 }
 
 type DialogInfo struct {
@@ -39,11 +40,11 @@ func (s *Server) mesList(ctx *http.RequestCtx) {
 	return
 }
 
-//type Message struct {
-//	Id        int64         `json:"id" db:"id"`
-//	Time      time.Time     `json:"time" db:"time"`
-//	Text      string        `json:"text" db:"text"`
-//	Sender    string        `json:"sender" db:"sender"`
-//	Recipient string        `json:"recipient" db:"recipient"`
-//	File      []models.File `json:"file"`
-//}
+type MessageInfo struct {
+	Text     string `json:"text"`
+	DialogId int    `json:"dialog_id"`
+}
+
+func (s *Server) sendMes(ctx *http.RequestCtx) {
+	log.Println("Send mes")
+}
