@@ -21,6 +21,14 @@ type DialogInfo struct {
 
 func (s *Server) mesList(ctx *http.RequestCtx) {
 	log.Println("Get mes list")
+
+	token := string(ctx.Request.Header.Peek("Authorization"))
+	userId := IsAuth(token)
+	if userId == -1 {
+		helpers.Respond(ctx, "no auth", http.StatusUnauthorized)
+		return
+	}
+
 	dialog := DialogInfo{}
 	if err := json.Unmarshal(ctx.PostBody(), &dialog); err != nil {
 		log.Print("Failed unmarshal user data. Reason: ", err.Error())
@@ -47,4 +55,12 @@ type MessageInfo struct {
 
 func (s *Server) sendMes(ctx *http.RequestCtx) {
 	log.Println("Send mes")
+
+	token := string(ctx.Request.Header.Peek("Authorization"))
+	userId := IsAuth(token)
+	if userId == -1 {
+		helpers.Respond(ctx, "no auth", http.StatusUnauthorized)
+		return
+	}
+
 }

@@ -105,8 +105,89 @@ func GetUsersList() ([]models.User, error) {
 }
 
 func GetDialogsList(id int) ([]models.Dialog, error) {
-	// TODO: пордумать
-	return nil, nil
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return nil, err
+	}
+
+	defer func() { log.Print(db.Quit()) }()
+
+	dials := make([]models.DialogDB, 0)
+
+	query := db.conn.Rebind(`SELECT dialog.id, user_1, user_2, text as last_mes_text, last_mes_sender FROM dialog
+    JOIN "message" m on m.id = dialog.last_mes
+WHERE user_1 = ? or user_2 = ?;`)
+
+	rows, err := db.conn.Queryx(query, id, id)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return nil, err
+	}
+	for rows.Next() {
+		dial := models.DialogDB{}
+		err = rows.StructScan(&dial)
+		if err != nil {
+			fmt.Printf(err.Error())
+			return nil, err
+		}
+		dials = append(dials, dial)
+	}
+
+	dialogs := make([]models.Dialog, 0)
+	friendId := 0
+	userFriend := models.User{}
+
+	for _, d := range dials {
+		dialog := models.Dialog{}
+		dialog.Id = d.Id
+		dialog.LastMes = d.LastMes
+
+		if d.LastMesSender == id {
+			dialog.AreYouLastMesSender = true
+		} else {
+			dialog.AreYouLastMesSender = false
+		}
+
+		if d.UserOne == id {
+			friendId = d.UserTwo
+		} else {
+			friendId = d.UserOne
+		}
+
+		userFriend, err = GetUserInfoById(friendId)
+		if err != nil {
+			fmt.Printf(err.Error())
+			return nil, err
+		}
+		dialog.FriendFullName = userFriend.SecondName + " " + userFriend.FirstName + " " + userFriend.ThirdName
+
+		dialogs = append(dialogs, dialog)
+	}
+
+	return dialogs, nil
+}
+
+func GetUserInfoById(userId int) (models.User, error) {
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return models.User{}, err
+	}
+
+	defer func() { log.Print(db.Quit()) }()
+
+	user := models.User{}
+
+	query := db.conn.Rebind(`SELECT * from "user" where id = ?;`)
+	err = db.conn.QueryRowx(query, userId).StructScan(&user)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return user, err
+	}
+
+	return user, nil
+
 }
 
 func GetMessagesList(dialogId int) ([]models.Message, error) {
@@ -115,6 +196,8 @@ func GetMessagesList(dialogId int) ([]models.Message, error) {
 		log.Print("Failed connect to db. Reason: ", err.Error())
 		return nil, err
 	}
+
+	defer func() { log.Print(db.Quit()) }()
 
 	mess := make([]models.Message, 0)
 

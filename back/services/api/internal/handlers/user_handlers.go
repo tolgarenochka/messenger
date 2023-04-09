@@ -13,27 +13,8 @@ import (
 	helpers "messenger/services/api/pkg/helpers/http"
 )
 
-var (
-	corsAllowHeaders     = "authorization"
-	corsAllowMethods     = "HEAD,GET,POST,PUT,DELETE,OPTIONS"
-	corsAllowOrigin      = "*"
-	corsAllowCredentials = "true"
-)
-
-func CORS(next http.RequestHandler) http.RequestHandler {
-	return func(ctx *http.RequestCtx) {
-
-		ctx.Response.Header.Set("Access-Control-Allow-Credentials", corsAllowCredentials)
-		ctx.Response.Header.Set("Access-Control-Allow-Headers", corsAllowHeaders)
-		ctx.Response.Header.Set("Access-Control-Allow-Methods", corsAllowMethods)
-		ctx.Response.Header.Set("Access-Control-Allow-Origin", corsAllowOrigin)
-
-		next(ctx)
-	}
-}
-
 func (s *Server) UserRouter(r *router.Router, c *cors.CorsHandler) {
-	r.POST("/auth", CORS(s.auth))
+	r.POST("/auth", c.CorsMiddleware(s.auth))
 	r.POST("/updatePhoto", c.CorsMiddleware(s.updatePhoto))
 	r.GET("/usersList", c.CorsMiddleware(s.usersList))
 }
@@ -52,12 +33,9 @@ func GenerateSecureToken(length int) string {
 }
 
 // UserToken map with session user_id:session_token
-var UserToken = map[int64]string{}
+var UserToken = map[string]int{}
 
 func (s *Server) auth(ctx *http.RequestCtx) {
-	ctx.Response.Header.Set("Access-Control-Allow-Credentials", "true")
-	ctx.Response.Header.SetBytesV("Access-Control-Allow-Origin", ctx.Request.Header.Peek("Origin"))
-
 	log.Println("Auth")
 	authData := AuthData{}
 
@@ -86,7 +64,7 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 	//	TokenWebSockets[token].Close()
 	//}
 	//
-	UserToken[user.Id] = token
+	UserToken[token] = user.Id
 	//TokenWebSockets[token] = NewWebsocket(ctx, ctx.Request)
 
 	helpers.Respond(ctx, token, http.StatusOK)
@@ -100,6 +78,14 @@ type NewPhoto struct {
 
 func (s *Server) updatePhoto(ctx *http.RequestCtx) {
 	log.Println("Update photo")
+
+	token := string(ctx.Request.Header.Peek("Authorization"))
+	userId := IsAuth(token)
+	if userId == -1 {
+		helpers.Respond(ctx, "no auth", http.StatusUnauthorized)
+		return
+	}
+
 	newPhoto := NewPhoto{}
 
 	if err := json.Unmarshal(ctx.PostBody(), &newPhoto); err != nil {
@@ -126,6 +112,13 @@ func (s *Server) updatePhoto(ctx *http.RequestCtx) {
 
 func (s *Server) usersList(ctx *http.RequestCtx) {
 	log.Println("Get users list")
+
+	token := string(ctx.Request.Header.Peek("Authorization"))
+	userId := IsAuth(token)
+	if userId == -1 {
+		helpers.Respond(ctx, "no auth", http.StatusUnauthorized)
+		return
+	}
 
 	users, err := db_wizard.GetUsersList()
 	if err != nil {

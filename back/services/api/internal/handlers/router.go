@@ -12,6 +12,7 @@ func (s *Server) initRouter() *router.Router {
 
 	s.UserRouter(r, c)
 	s.MesRouter(r, c)
+	s.DialogRouter(r, c)
 
 	return r
 }
