@@ -115,7 +115,7 @@ func GetDialogsList(id int) ([]models.Dialog, error) {
 
 	dials := make([]models.DialogDB, 0)
 
-	query := db.conn.Rebind(`SELECT dialog.id, user_1, user_2, text as last_mes_text, last_mes_sender FROM dialog
+	query := db.conn.Rebind(`SELECT dialog.id, user_1, user_2, text as last_mes_text, is_read, last_mes_sender FROM dialog
     JOIN "message" m on m.id = dialog.last_mes
 WHERE user_1 = ? or user_2 = ?;`)
 
@@ -145,8 +145,10 @@ WHERE user_1 = ? or user_2 = ?;`)
 
 		if d.LastMesSender == id {
 			dialog.AreYouLastMesSender = true
+			dialog.IsRead = true
 		} else {
 			dialog.AreYouLastMesSender = false
+			dialog.IsRead = d.IsRead
 		}
 
 		if d.UserOne == id {
@@ -190,7 +192,7 @@ func GetUserInfoById(userId int) (models.User, error) {
 
 }
 
-func GetMessagesList(dialogId int) ([]models.Message, error) {
+func GetMessagesList(dialogId int, UserId int) ([]models.Message, error) {
 	db, err := NewConnect()
 	if err != nil {
 		log.Print("Failed connect to db. Reason: ", err.Error())
@@ -199,7 +201,7 @@ func GetMessagesList(dialogId int) ([]models.Message, error) {
 
 	defer func() { log.Print(db.Quit()) }()
 
-	mess := make([]models.Message, 0)
+	messes := make([]models.MessageDB, 0)
 
 	query := db.conn.Rebind(`SELECT message.id, time, text, sender, recipient from message join dialog d on
 message.dialog_id = d.id WHERE is_deleted = FALSE and d.id = ?
@@ -210,7 +212,7 @@ message.dialog_id = d.id WHERE is_deleted = FALSE and d.id = ?
 		return nil, err
 	}
 	for rows.Next() {
-		mes := models.Message{}
+		mes := models.MessageDB{}
 		err = rows.StructScan(&mes)
 		if err != nil {
 			fmt.Printf(err.Error())
@@ -222,6 +224,23 @@ message.dialog_id = d.id WHERE is_deleted = FALSE and d.id = ?
 			return nil, err
 		}
 		mes.File = files
+
+		messes = append(messes, mes)
+	}
+
+	mess := make([]models.Message, 0)
+	for _, m := range messes {
+		mes := models.Message{}
+		mes.Id = m.Id
+		mes.File = m.File
+		mes.Time = m.Time
+		mes.Text = m.Text
+
+		if m.Sender == UserId {
+			mes.AmISender = true
+		} else {
+			mes.AmISender = false
+		}
 
 		mess = append(mess, mes)
 	}

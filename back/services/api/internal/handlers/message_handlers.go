@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Server) MesRouter(r *router.Router, c *cors.CorsHandler) {
-	r.GET("/mesList", c.CorsMiddleware(s.mesList))
+	r.POST("/mesList", c.CorsMiddleware(s.mesList))
 	r.POST("/sendMes", c.CorsMiddleware(s.sendMes))
 }
 
@@ -32,12 +32,13 @@ func (s *Server) mesList(ctx *http.RequestCtx) {
 	dialog := DialogInfo{}
 	if err := json.Unmarshal(ctx.PostBody(), &dialog); err != nil {
 		log.Print("Failed unmarshal user data. Reason: ", err.Error())
+		log.Print(ctx.PostBody())
 
 		helpers.Respond(ctx, "Unmarshal error", http.StatusBadRequest)
 		return
 	}
 
-	mess, err := db_wizard.GetMessagesList(dialog.DialogId)
+	mess, err := db_wizard.GetMessagesList(dialog.DialogId, userId)
 	if err != nil {
 		log.Print("Failed to do sql req. Reason: ", err.Error())
 		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
