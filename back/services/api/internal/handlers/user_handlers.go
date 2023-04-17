@@ -24,6 +24,12 @@ type AuthData struct {
 	Pas  string `json:"pas"`
 }
 
+type UserInfo struct {
+	Token    string `json:"token"`
+	FullName string `json:"full_name"`
+	Photo    string `json:"photo"`
+}
+
 func GenerateSecureToken(length int) string {
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {
@@ -67,7 +73,12 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 	UserToken[token] = user.Id
 	//TokenWebSockets[token] = NewWebsocket(ctx, ctx.Request)
 
-	helpers.Respond(ctx, token, http.StatusOK)
+	usr := UserInfo{
+		Token:    token,
+		FullName: user.SecondName + " " + user.FirstName + " " + user.ThirdName,
+		Photo:    user.Photo,
+	}
+	helpers.Respond(ctx, usr, http.StatusOK)
 }
 
 // NewPhoto TODO: front gives us id? or token for getting id from UserToken?
