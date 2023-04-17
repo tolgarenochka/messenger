@@ -6,6 +6,7 @@ type Dialog struct {
 	AreYouLastMesSender bool   `json:"are_you_last_mes_sender"`
 	FriendFullName      string `json:"full_name"`
 	IsRead              bool   `json:"is_read" db:"is_read"`
+	FriendPhoto         string `json:"friend_photo"`
 }
 
 type DialogDB struct {

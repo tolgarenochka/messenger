@@ -163,6 +163,7 @@ WHERE user_1 = ? or user_2 = ?;`)
 			return nil, err
 		}
 		dialog.FriendFullName = userFriend.SecondName + " " + userFriend.FirstName + " " + userFriend.ThirdName
+		dialog.FriendPhoto = userFriend.Photo
 
 		dialogs = append(dialogs, dialog)
 	}
