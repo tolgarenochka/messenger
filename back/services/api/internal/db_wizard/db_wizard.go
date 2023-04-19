@@ -157,6 +157,8 @@ WHERE user_1 = ? or user_2 = ?;`)
 			friendId = d.UserOne
 		}
 
+		dialog.FriendId = friendId
+
 		userFriend, err = GetUserInfoById(friendId)
 		if err != nil {
 			fmt.Printf(err.Error())
@@ -279,4 +281,71 @@ JOIN message m on m.id = file.mes_id WHERE m.id = ?;`)
 	}
 
 	return files, nil
+}
+
+type Participants struct {
+	UserOne int `db:"user_1"`
+	UserTwo int `db:"user_2"`
+}
+
+func GetDialogParticipants(dialogId int) (int, int, error) {
+	dialog := Participants{}
+
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return 0, 0, err
+	}
+
+	defer func() { log.Print(db.Quit()) }()
+
+	query := db.conn.Rebind(`select user_1, user_2 from dialog where id=?;`)
+	err = db.conn.QueryRowx(query, dialogId).StructScan(&dialog)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return 0, 0, err
+	}
+
+	return dialog.UserOne, dialog.UserTwo, nil
+}
+
+func PostMessage(message models.MessageDB, dialogId int) (int, error) {
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return 0, err
+	}
+
+	defer func() { log.Print(db.Quit()) }()
+
+	var mesId int
+
+	query := db.conn.Rebind(`INSERT INTO message (id, text, sender, recipient, is_deleted, is_read, dialog_id, time) 
+VALUES (DEFAULT, ?, ?, ?, DEFAULT, DEFAULT, ?, ?) RETURNING id;`)
+	err = db.conn.QueryRow(query, message.Text, message.Sender, message.Recipient, dialogId, message.Time).Scan(&mesId)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return 0, err
+	}
+
+	return mesId, nil
+}
+
+func UpdateLastMesInDialog(dialogId int, mesId int, senderId int) error {
+	db, err := NewConnect()
+	if err != nil {
+		log.Print("Failed connect to db. Reason: ", err.Error())
+		return err
+	}
+
+	defer func() { log.Print(db.Quit()) }()
+
+	query := db.conn.Rebind(`UPDATE dialog SET last_mes = ?, last_mes_sender = ? WHERE id = ?;`)
+	_, err = db.conn.Queryx(query, mesId, senderId, dialogId)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return err
+	}
+
+	return nil
 }

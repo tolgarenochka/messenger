@@ -4,6 +4,7 @@ type Dialog struct {
 	Id                  int    `json:"id"`
 	LastMes             string `json:"last_mes"`
 	AreYouLastMesSender bool   `json:"are_you_last_mes_sender"`
+	FriendId            int    `json:"friend_id"`
 	FriendFullName      string `json:"full_name"`
 	IsRead              bool   `json:"is_read" db:"is_read"`
 	FriendPhoto         string `json:"friend_photo"`

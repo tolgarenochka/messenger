@@ -17,6 +17,7 @@ func (s *Server) UserRouter(r *router.Router, c *cors.CorsHandler) {
 	r.POST("/auth", c.CorsMiddleware(s.auth))
 	r.POST("/updatePhoto", c.CorsMiddleware(s.updatePhoto))
 	r.GET("/usersList", c.CorsMiddleware(s.usersList))
+	r.POST("/logout", c.CorsMiddleware(s.logout))
 }
 
 type AuthData struct {
@@ -79,6 +80,20 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 		Photo:    user.Photo,
 	}
 	helpers.Respond(ctx, usr, http.StatusOK)
+}
+
+func (s *Server) logout(ctx *http.RequestCtx) {
+	log.Println("Log Out")
+
+	token := string(ctx.Request.Header.Peek("Authorization"))
+	userId := IsAuth(token)
+	if userId == -1 {
+		helpers.Respond(ctx, "no auth", http.StatusUnauthorized)
+		return
+	}
+
+	delete(UserToken, token)
+	helpers.Respond(ctx, "un auth", http.StatusOK)
 }
 
 // NewPhoto TODO: front gives us id? or token for getting id from UserToken?

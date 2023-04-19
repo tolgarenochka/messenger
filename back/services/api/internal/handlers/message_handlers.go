@@ -8,6 +8,8 @@ import (
 	"log"
 	"messenger/services/api/internal/db_wizard"
 	helpers "messenger/services/api/pkg/helpers/http"
+	"messenger/services/api/pkg/helpers/models"
+	"time"
 )
 
 func (s *Server) MesRouter(r *router.Router, c *cors.CorsHandler) {
@@ -54,6 +56,12 @@ type MessageInfo struct {
 	DialogId int    `json:"dialog_id"`
 }
 
+type MesData struct {
+	DialogId int       `json:"dialog_id"`
+	Time     time.Time `json:"send_time"`
+	Text     string    `json:"text"`
+}
+
 func (s *Server) sendMes(ctx *http.RequestCtx) {
 	log.Println("Send mes")
 
@@ -64,4 +72,46 @@ func (s *Server) sendMes(ctx *http.RequestCtx) {
 		return
 	}
 
+	mesData := MesData{}
+	mes := models.MessageDB{}
+	if err := json.Unmarshal(ctx.PostBody(), &mesData); err != nil {
+		log.Print("Failed unmarshal user data. Reason: ", err.Error())
+
+		helpers.Respond(ctx, "Unmarshal error", http.StatusBadRequest)
+		return
+	}
+
+	user1, user2, err := db_wizard.GetDialogParticipants(mesData.DialogId)
+	if err != nil {
+		log.Print("Failed to do sql req. Reason: ", err.Error())
+		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
+		return
+	}
+
+	if user1 == userId {
+		mes.Recipient = user2
+	} else {
+		mes.Recipient = user1
+	}
+
+	mes.Text = mesData.Text
+	mes.Time = mesData.Time
+	mes.Sender = userId
+
+	mesId, err := db_wizard.PostMessage(mes, mesData.DialogId)
+	if err != nil {
+		log.Print("Failed to do sql req. Reason: ", err.Error())
+		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
+		return
+	}
+
+	err = db_wizard.UpdateLastMesInDialog(mesData.DialogId, mesId, mes.Sender)
+	if err != nil {
+		log.Print("Failed to do sql req. Reason: ", err.Error())
+		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
+		return
+	}
+
+	helpers.Respond(ctx, "message was send", http.StatusOK)
+	return
 }
