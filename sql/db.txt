@@ -13,7 +13,7 @@ create table "user"
             primary key,
     mail        text                                              not null,
     pas         text                                              not null,
-    photo       varchar(100)                                      not null,
+    photo       varchar,
     first_name  text                                              not null,
     second_name text                                              not null,
     third_name  text
