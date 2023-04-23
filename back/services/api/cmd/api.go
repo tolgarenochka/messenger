@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+
 	"messenger/services/api/internal/handlers"
 	_ "os"
 	"os/signal"
 	"syscall"
+
+	. "messenger/services/api/pkg/helpers/logger"
 )
 
 func main() {
-	fmt.Printf("Mess running")
+	Logger.Info("Mess running")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
 	defer cancel()
@@ -21,6 +22,6 @@ func main() {
 
 	err := s.Run(ctx, "", "")
 	if err != nil {
-		log.Fatal(err)
+		Logger.Fatal(err)
 	}
 }

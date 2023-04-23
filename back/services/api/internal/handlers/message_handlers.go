@@ -5,11 +5,12 @@ import (
 	cors "github.com/adhityaramadhanus/fasthttpcors"
 	"github.com/fasthttp/router"
 	http "github.com/valyala/fasthttp"
-	"log"
 	"messenger/services/api/internal/db_wizard"
 	helpers "messenger/services/api/pkg/helpers/http"
 	"messenger/services/api/pkg/helpers/models"
 	"time"
+
+	. "messenger/services/api/pkg/helpers/logger"
 )
 
 func (s *Server) MesRouter(r *router.Router, c *cors.CorsHandler) {
@@ -22,7 +23,7 @@ type DialogInfo struct {
 }
 
 func (s *Server) mesList(ctx *http.RequestCtx) {
-	log.Println("Get mes list")
+	Logger.Info("Get mes list")
 
 	token := string(ctx.Request.Header.Peek("Authorization"))
 	userId := IsAuth(token)
@@ -33,8 +34,8 @@ func (s *Server) mesList(ctx *http.RequestCtx) {
 
 	dialog := DialogInfo{}
 	if err := json.Unmarshal(ctx.PostBody(), &dialog); err != nil {
-		log.Print("Failed unmarshal user data. Reason: ", err.Error())
-		log.Print(ctx.PostBody())
+		Logger.Error("Failed unmarshal user data. Reason: ", err.Error())
+		Logger.Debug(ctx.PostBody())
 
 		helpers.Respond(ctx, "Unmarshal error", http.StatusBadRequest)
 		return
@@ -42,7 +43,7 @@ func (s *Server) mesList(ctx *http.RequestCtx) {
 
 	mess, err := db_wizard.GetMessagesList(dialog.DialogId, userId)
 	if err != nil {
-		log.Print("Failed to do sql req. Reason: ", err.Error())
+		Logger.Error("Failed to do sql req. Reason: ", err.Error())
 		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
 		return
 	}
@@ -63,7 +64,7 @@ type MesData struct {
 }
 
 func (s *Server) sendMes(ctx *http.RequestCtx) {
-	log.Println("Send mes")
+	Logger.Info("Send mes")
 
 	token := string(ctx.Request.Header.Peek("Authorization"))
 	userId := IsAuth(token)
@@ -75,15 +76,29 @@ func (s *Server) sendMes(ctx *http.RequestCtx) {
 	mesData := MesData{}
 	mes := models.MessageDB{}
 	if err := json.Unmarshal(ctx.PostBody(), &mesData); err != nil {
-		log.Print("Failed unmarshal user data. Reason: ", err.Error())
+		Logger.Error("Failed unmarshal user data. Reason: ", err.Error())
 
 		helpers.Respond(ctx, "Unmarshal error", http.StatusBadRequest)
 		return
 	}
 
+	//ws, ok := TokenWebSockets[token]
+	//if !ok {
+	//	Logger.Error("No websocket, bad message send.")
+	//	helpers.Respond(ctx, "no websocket", http.StatusBadRequest)
+	//	return
+	//}
+	//
+	//_, err := ws.Write(ctx.PostBody())
+	//if err != nil {
+	//	Logger.Error("Bad sending message via websocket.")
+	//	helpers.Respond(ctx, "bad websocket sending", http.StatusBadRequest)
+	//	return
+	//}
+
 	user1, user2, err := db_wizard.GetDialogParticipants(mesData.DialogId)
 	if err != nil {
-		log.Print("Failed to do sql req. Reason: ", err.Error())
+		Logger.Error("Failed to do sql req. Reason: ", err.Error())
 		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
 		return
 	}
@@ -100,14 +115,14 @@ func (s *Server) sendMes(ctx *http.RequestCtx) {
 
 	mesId, err := db_wizard.PostMessage(mes, mesData.DialogId)
 	if err != nil {
-		log.Print("Failed to do sql req. Reason: ", err.Error())
+		Logger.Error("Failed to do sql req. Reason: ", err.Error())
 		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
 		return
 	}
 
 	err = db_wizard.UpdateLastMesInDialog(mesData.DialogId, mesId, mes.Sender)
 	if err != nil {
-		log.Print("Failed to do sql req. Reason: ", err.Error())
+		Logger.Error("Failed to do sql req. Reason: ", err.Error())
 		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
 		return
 	}

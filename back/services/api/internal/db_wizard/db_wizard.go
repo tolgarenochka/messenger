@@ -2,11 +2,12 @@ package db_wizard
 
 import (
 	"context"
-	"fmt"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
-	"log"
+
 	"messenger/services/api/pkg/helpers/models"
+
+	. "messenger/services/api/pkg/helpers/logger"
 )
 
 type Store struct {
@@ -17,7 +18,7 @@ type Store struct {
 func NewConnect() (*Store, error) {
 	conn, err := sqlx.ConnectContext(context.Background(), "pgx", "postgresql://localhost:5432/postgres")
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return nil, err
 	}
 	return &Store{conn: conn}, nil
@@ -30,18 +31,18 @@ func (s *Store) Quit() error {
 func Auth(mail string, pas string) (models.User, error) {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return models.User{}, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	user := models.User{}
 
 	query := db.conn.Rebind(`SELECT * from "user" WHERE mail = ? and pas = ?;`)
 	err = db.conn.QueryRowx(query, mail, pas).StructScan(&user)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return user, err
 	}
 
@@ -52,22 +53,22 @@ func Auth(mail string, pas string) (models.User, error) {
 func UpdatePhoto(photo string, id int) (int64, error) {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return 0, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	query := db.conn.Rebind(`UPDATE "user" SET photo = ? WHERE id = ?;`)
 	res, err := db.conn.Exec(query, photo, id)
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return 0, err
 	}
 
 	count, err := res.RowsAffected()
 	if err != nil {
-		log.Print("Failed connect to count result rows. Reason: ", err.Error())
+		Logger.Error("Failed connect to count result rows. Reason: ", err.Error())
 		return 0, err
 	}
 
@@ -77,25 +78,25 @@ func UpdatePhoto(photo string, id int) (int64, error) {
 func GetUsersList() ([]models.User, error) {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return nil, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	users := make([]models.User, 0)
 
 	query := db.conn.Rebind(`SELECT * from "user";`)
 	rows, err := db.conn.Queryx(query)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return nil, err
 	}
 	for rows.Next() {
 		user := models.User{}
 		err = rows.StructScan(&user)
 		if err != nil {
-			fmt.Printf(err.Error())
+			Logger.Error(err.Error())
 			return nil, err
 		}
 		users = append(users, user)
@@ -107,11 +108,11 @@ func GetUsersList() ([]models.User, error) {
 func GetDialogsList(id int) ([]models.Dialog, error) {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return nil, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	dials := make([]models.DialogDB, 0)
 
@@ -121,14 +122,14 @@ WHERE user_1 = ? or user_2 = ?;`)
 
 	rows, err := db.conn.Queryx(query, id, id)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return nil, err
 	}
 	for rows.Next() {
 		dial := models.DialogDB{}
 		err = rows.StructScan(&dial)
 		if err != nil {
-			fmt.Printf(err.Error())
+			Logger.Error(err.Error())
 			return nil, err
 		}
 		dials = append(dials, dial)
@@ -161,7 +162,7 @@ WHERE user_1 = ? or user_2 = ?;`)
 
 		userFriend, err = GetUserInfoById(friendId)
 		if err != nil {
-			fmt.Printf(err.Error())
+			Logger.Error(err.Error())
 			return nil, err
 		}
 		dialog.FriendFullName = userFriend.SecondName + " " + userFriend.FirstName + " " + userFriend.ThirdName
@@ -176,18 +177,18 @@ WHERE user_1 = ? or user_2 = ?;`)
 func GetUserInfoById(userId int) (models.User, error) {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return models.User{}, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	user := models.User{}
 
 	query := db.conn.Rebind(`SELECT * from "user" where id = ?;`)
 	err = db.conn.QueryRowx(query, userId).StructScan(&user)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return user, err
 	}
 
@@ -198,11 +199,11 @@ func GetUserInfoById(userId int) (models.User, error) {
 func GetMessagesList(dialogId int, UserId int) ([]models.Message, error) {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return nil, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	messes := make([]models.MessageDB, 0)
 
@@ -211,19 +212,19 @@ message.dialog_id = d.id WHERE is_deleted = FALSE and d.id = ?
                              ORDER BY time;`)
 	rows, err := db.conn.Queryx(query, dialogId)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return nil, err
 	}
 	for rows.Next() {
 		mes := models.MessageDB{}
 		err = rows.StructScan(&mes)
 		if err != nil {
-			fmt.Printf(err.Error())
+			Logger.Error(err.Error())
 			return nil, err
 		}
 		files, err := GetFilesList(mes.Id)
 		if err != nil {
-			fmt.Printf(err.Error())
+			Logger.Error(err.Error())
 			return nil, err
 		}
 		mes.File = files
@@ -255,11 +256,11 @@ message.dialog_id = d.id WHERE is_deleted = FALSE and d.id = ?
 func GetFilesList(mesId int64) ([]models.File, error) {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return nil, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	files := make([]models.File, 0)
 
@@ -267,14 +268,14 @@ func GetFilesList(mesId int64) ([]models.File, error) {
 JOIN message m on m.id = file.mes_id WHERE m.id = ?;`)
 	rows, err := db.conn.Queryx(query, mesId)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return nil, err
 	}
 	for rows.Next() {
 		file := models.File{}
 		err = rows.StructScan(&file)
 		if err != nil {
-			fmt.Printf(err.Error())
+			Logger.Error(err.Error())
 			return nil, err
 		}
 		files = append(files, file)
@@ -293,16 +294,16 @@ func GetDialogParticipants(dialogId int) (int, int, error) {
 
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return 0, 0, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	query := db.conn.Rebind(`select user_1, user_2 from dialog where id=?;`)
 	err = db.conn.QueryRowx(query, dialogId).StructScan(&dialog)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return 0, 0, err
 	}
 
@@ -312,11 +313,11 @@ func GetDialogParticipants(dialogId int) (int, int, error) {
 func PostMessage(message models.MessageDB, dialogId int) (int, error) {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return 0, err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	var mesId int
 
@@ -324,7 +325,7 @@ func PostMessage(message models.MessageDB, dialogId int) (int, error) {
 VALUES (DEFAULT, ?, ?, ?, DEFAULT, DEFAULT, ?, ?) RETURNING id;`)
 	err = db.conn.QueryRow(query, message.Text, message.Sender, message.Recipient, dialogId, message.Time).Scan(&mesId)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return 0, err
 	}
 
@@ -334,16 +335,16 @@ VALUES (DEFAULT, ?, ?, ?, DEFAULT, DEFAULT, ?, ?) RETURNING id;`)
 func UpdateLastMesInDialog(dialogId int, mesId int, senderId int) error {
 	db, err := NewConnect()
 	if err != nil {
-		log.Print("Failed connect to db. Reason: ", err.Error())
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
 		return err
 	}
 
-	defer func() { log.Print(db.Quit()) }()
+	defer func() { Logger.Debug(db.Quit()) }()
 
 	query := db.conn.Rebind(`UPDATE dialog SET last_mes = ?, last_mes_sender = ? WHERE id = ?;`)
 	_, err = db.conn.Queryx(query, mesId, senderId, dialogId)
 	if err != nil {
-		fmt.Printf(err.Error())
+		Logger.Error(err.Error())
 		return err
 	}
 

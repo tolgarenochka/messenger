@@ -4,9 +4,11 @@ import (
 	cors "github.com/adhityaramadhanus/fasthttpcors"
 	"github.com/fasthttp/router"
 	http "github.com/valyala/fasthttp"
-	"log"
+
 	"messenger/services/api/internal/db_wizard"
 	helpers "messenger/services/api/pkg/helpers/http"
+
+	. "messenger/services/api/pkg/helpers/logger"
 )
 
 func (s *Server) DialogRouter(r *router.Router, c *cors.CorsHandler) {
@@ -14,7 +16,7 @@ func (s *Server) DialogRouter(r *router.Router, c *cors.CorsHandler) {
 }
 
 func (s *Server) dialogList(ctx *http.RequestCtx) {
-	log.Println("Get dialog list")
+	Logger.Info("Get dialog list")
 
 	token := string(ctx.Request.Header.Peek("Authorization"))
 	userId := IsAuth(token)
@@ -25,7 +27,7 @@ func (s *Server) dialogList(ctx *http.RequestCtx) {
 
 	dialogs, err := db_wizard.GetDialogsList(userId)
 	if err != nil {
-		log.Print("Failed to do sql req. Reason: ", err.Error())
+		Logger.Error("Failed to do sql req. Reason: ", err.Error())
 		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
 		return
 	}
