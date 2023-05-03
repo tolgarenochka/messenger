@@ -4,7 +4,8 @@ import "github.com/dgrr/websocket"
 
 const (
 	RegisterUser = "RegisterUser"
-	MessageRead  = "MessageRead"
+	MessageRead  = "ReadDialog"
+	SendMessage  = "SendMessage"
 )
 
 type WSEvent struct {

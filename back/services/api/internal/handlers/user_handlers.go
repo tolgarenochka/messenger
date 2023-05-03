@@ -10,7 +10,6 @@ import (
 	http "github.com/valyala/fasthttp"
 	"messenger/services/api/internal/db_wizard"
 	helpers "messenger/services/api/pkg/helpers/http"
-
 	. "messenger/services/api/pkg/helpers/logger"
 )
 

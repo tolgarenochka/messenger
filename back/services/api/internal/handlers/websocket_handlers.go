@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"github.com/dgrr/websocket"
+	"messenger/services/api/internal/db_wizard"
+	"messenger/services/api/pkg/helpers/models"
 	"time"
 
 	. "messenger/services/api/pkg/helpers/logger"
@@ -49,7 +51,6 @@ func OnPong(c *websocket.Conn, data []byte) {
 	}
 }
 
-
 func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 	var newEvent WSEvent
 
@@ -58,6 +59,7 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 		Logger.Error("Failed get new websocket event. Reason: ", err)
 		return
 	}
+	userId := IsAuth(newEvent.Token)
 
 	Logger.Debug(newEvent.EventType)
 	switch newEvent.EventType {
@@ -67,15 +69,14 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 			return
 		}
 
-		if _, ok := TokenWebSockets[newEvent.Token];!ok {
+		if _, ok := TokenWebSockets[newEvent.Token]; !ok {
 
-			//TODO: uncomment
-			//if _, ok2 := UserToken[token]; !ok2 {
-			//	Logger.Error()
-			//	return
-			//}
+			if _, ok2 := UserToken[newEvent.Token]; !ok2 {
+				Logger.Error()
+				return
+			}
 
-			if  _, ok3 := UnauthorizedWebsockets[c.ID()]; !ok3 {
+			if _, ok3 := UnauthorizedWebsockets[c.ID()]; !ok3 {
 				Logger.Error("Websocket connection not found!")
 				return
 			}
@@ -91,9 +92,47 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 		// get message and user id from newEvent
 		// send event "msg read" to author of message
 		// update database
+
+	case SendMessage:
+		Logger.Info("Send mes")
+
+		user1, user2, err := db_wizard.GetDialogParticipants(newEvent.MsgData.DialogId)
+		if err != nil {
+			Logger.Error("Failed to do sql req. Reason: ", err.Error())
+			return
+		}
+
+		mes := models.MessageDB{}
+
+		if user1 == userId {
+			mes.Recipient = user2
+		} else {
+			mes.Recipient = user1
+		}
+
+		mes.Text = newEvent.MsgData.Text
+		mes.Time = newEvent.MsgData.Time
+		mes.Sender = userId
+
+		// write message to db
+		mesId, err := db_wizard.PostMessage(mes, newEvent.MsgData.DialogId)
+		if err != nil {
+			Logger.Error("Failed to do sql req. Reason: ", err.Error())
+			return
+		}
+
+		// update last message in db
+		err = db_wizard.UpdateLastMesInDialog(newEvent.MsgData.DialogId, mesId, mes.Sender)
+		if err != nil {
+			Logger.Error("Failed to do sql req. Reason: ", err.Error())
+			return
+		}
+
+		//friendC =
+
+		//c.Write([]byte("seiuthkd"))
+
 	}
-
-
 
 	Logger.Infof("Received data from %s: %s", c.RemoteAddr(), data)
 }

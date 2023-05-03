@@ -7,3 +7,12 @@ func IsAuth(token string) int {
 	}
 	return -1
 }
+
+//func IsWsOpen(userId int) *websocket.Conn {
+//
+//	ws, ok := TokenWebSockets[token]
+//	if ok {
+//		return id
+//	}
+//	return ws
+//}

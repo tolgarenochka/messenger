@@ -8,7 +8,7 @@ require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/dgrr/websocket v0.1.1 // indirect
 	github.com/fasthttp/router v1.4.18 // indirect
-	github.com/fasthttp/websocket v1.5.2 // indirect
+	//github.com/fasthttp/websocket v1.5.2 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
