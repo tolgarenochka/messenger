@@ -75,7 +75,7 @@ func UpdatePhoto(photo string, id int) (int64, error) {
 	return count, nil
 }
 
-func GetUsersList() ([]models.User, error) {
+func GetUsersList(id int) ([]models.User, error) {
 	db, err := NewConnect()
 	if err != nil {
 		Logger.Error("Failed connect to db. Reason: ", err.Error())
@@ -86,8 +86,13 @@ func GetUsersList() ([]models.User, error) {
 
 	users := make([]models.User, 0)
 
-	query := db.conn.Rebind(`SELECT * from "user";`)
-	rows, err := db.conn.Queryx(query)
+	query := db.conn.Rebind(`SELECT id, first_name, second_name, third_name from "user" as u
+         where not
+             (u.id in (select user_1 from dialog where user_2 = ?)
+            OR u.id in (select user_2 from dialog where user_1 = ?))
+            AND not u.id = ?
+			ORDER BY first_name, second_name, third_name;`)
+	rows, err := db.conn.Queryx(query, id, id, id)
 	if err != nil {
 		Logger.Error(err.Error())
 		return nil, err

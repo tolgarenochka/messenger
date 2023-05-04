@@ -140,7 +140,7 @@ func (s *Server) usersList(ctx *http.RequestCtx) {
 		return
 	}
 
-	users, err := db_wizard.GetUsersList()
+	users, err := db_wizard.GetUsersList(userId)
 	if err != nil {
 		Logger.Error("Failed to do sql req. Reason: ", err.Error())
 		helpers.Respond(ctx, "sql error", http.StatusBadRequest)

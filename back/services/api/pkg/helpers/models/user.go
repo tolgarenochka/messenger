@@ -9,8 +9,8 @@ type User struct {
 	FirstName  string `json:"first_name" db:"first_name"`
 	SecondName string `json:"second_name" db:"second_name"`
 	ThirdName  string `json:"third_name" db:"third_name"`
-	Mail       string `json:"mail" db:"mail"`
-	Password   string `json:"pas" db:"pas"`
+	Mail       string `json:"mail,omitempty" db:"mail"`
+	Password   string `json:"pas,omitempty" db:"pas"`
 	Photo      string `json:"photo,omitempty" db:"photo"`
 }
 
