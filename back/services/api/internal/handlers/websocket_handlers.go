@@ -11,6 +11,11 @@ import (
 	. "messenger/services/api/pkg/helpers/logger"
 )
 
+type TimeStruct struct {
+	Event string `json:"event"`
+	Id    int    `json:"id"`
+}
+
 // register a connection when it's open
 func RegisterConn(c *websocket.Conn) {
 	UnauthorizedWebsockets[c.ID()] = c
@@ -88,15 +93,53 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 		} else {
 			Logger.Debug("User already registered!")
 		}
-	case MessageRead:
-		// get message and user id from newEvent
-		// send event "msg read" to author of message
-		// update database
+	case ReadDialog:
+		Logger.Info("Read dialog")
+
+		err := db_wizard.ReadDialog(newEvent.DialogId)
+		if err != nil {
+			Logger.Error("Failed to do sql req. Reason: ", err.Error())
+			return
+		}
 
 	case SendMessage:
 		Logger.Info("Send mes")
 
-		user1, user2, err := db_wizard.GetDialogParticipants(newEvent.MsgData.DialogId)
+		var dId int
+		var flag = false
+		var a WSEvent
+
+		if newEvent.MsgData.DialogId == 0 {
+			flag = true
+			dId, err = db_wizard.CreateDialog(userId, newEvent.MsgData.FriendId)
+			if err != nil {
+				Logger.Error("Failed to send mes to ws. Reason: ", err.Error())
+				return
+			}
+
+			newEvent.MsgData.DialogId = dId
+
+			userInf, err := db_wizard.GetUserInfoById(userId)
+			if err != nil {
+				Logger.Error("Failed to do sql req. Reason: ", err.Error())
+				return
+			}
+			newEvent.MsgMetaData.FriendPhoto = userInf.Photo
+			newEvent.MsgMetaData.FriendFullName = userInf.FullName
+
+			a := TimeStruct{Event: "dialogId", Id: dId}
+
+			jsn, err := json.Marshal(a)
+			_, err = c.Write(jsn)
+			if err != nil {
+				Logger.Error("Failed to send mes to ws. Reason: ", err.Error())
+				return
+			}
+		} else {
+			dId = newEvent.MsgData.DialogId
+		}
+
+		user1, user2, err := db_wizard.GetDialogParticipants(dId)
 		if err != nil {
 			Logger.Error("Failed to do sql req. Reason: ", err.Error())
 			return
@@ -115,20 +158,39 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 		mes.Sender = userId
 
 		// write message to db
-		mesId, err := db_wizard.PostMessage(mes, newEvent.MsgData.DialogId)
+		mesId, err := db_wizard.PostMessage(mes, dId)
 		if err != nil {
 			Logger.Error("Failed to do sql req. Reason: ", err.Error())
 			return
 		}
 
 		// update last message in db
-		err = db_wizard.UpdateLastMesInDialog(newEvent.MsgData.DialogId, mesId, mes.Sender)
+		err = db_wizard.UpdateLastMesInDialog(dId, mesId, mes.Sender)
 		if err != nil {
 			Logger.Error("Failed to do sql req. Reason: ", err.Error())
 			return
 		}
 
-		//friendC =
+		for token, id := range UserToken {
+			if id == newEvent.MsgData.FriendId {
+				ws, ok := TokenWebSockets[token]
+				if ok {
+					if flag == false {
+						a = WSEvent{Token: "", EventType: "NewMessage", MsgData: newEvent.MsgData}
+					} else {
+						newEvent.MsgData.FriendId = userId
+						a = WSEvent{Token: "", EventType: "NewMessage", MsgData: newEvent.MsgData, MsgMetaData: newEvent.MsgMetaData}
+					}
+
+					jsn, err := json.Marshal(a)
+					_, err = ws.Write(jsn)
+					if err != nil {
+						Logger.Error("Failed to send mes to ws. Reason: ", err.Error())
+						return
+					}
+				}
+			}
+		}
 
 		//c.Write([]byte("seiuthkd"))
 

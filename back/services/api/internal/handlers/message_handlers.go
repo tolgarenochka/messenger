@@ -53,12 +53,13 @@ func (s *Server) mesList(ctx *http.RequestCtx) {
 }
 
 type MessageInfo struct {
-	Text     string `json:"text"`
-	DialogId int    `json:"dialog_id"`
+	FriendPhoto    string `json:"friend_photo"`
+	FriendFullName string `json:"friend_full_name"`
 }
 
 type MesData struct {
 	DialogId int       `json:"dialog_id"`
+	FriendId int       `json:"friend_id"`
 	Time     time.Time `json:"send_time"`
 	Text     string    `json:"text"`
 }

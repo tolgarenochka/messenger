@@ -4,15 +4,16 @@ import "github.com/dgrr/websocket"
 
 const (
 	RegisterUser = "RegisterUser"
-	MessageRead  = "ReadDialog"
+	ReadDialog   = "ReadDialog"
 	SendMessage  = "SendMessage"
 )
 
 type WSEvent struct {
 	Token       string      `json:"token"`
-	MsgMetaData MessageInfo `json:"message_info,omitempty"` //TODO: it is needed in msg id. Check front.
+	MsgMetaData MessageInfo `json:"message_info,omitempty"`
 	MsgData     MesData     `json:"message_data,omitempty"`
 	EventType   string      `json:"event"`
+	DialogId    int         `json:"dialog_id,omitempty"`
 }
 
 type WS struct {

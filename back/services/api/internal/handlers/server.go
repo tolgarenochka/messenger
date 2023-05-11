@@ -48,7 +48,7 @@ func (s *Server) Run(ctx context.Context, cert, key string) error {
 		if err := s.server.serverHTTPS.AppendCert(cert, key); err != nil {
 			return err
 		}
-		return s.server.serverHTTPS.ListenAndServeTLS("localhost:8080", "", "")
+		return s.server.serverHTTPS.ListenAndServeTLS("localhost:8083", "", "")
 	})
 
 	ws := InitWebSocketServer()
@@ -59,7 +59,7 @@ func (s *Server) Run(ctx context.Context, cert, key string) error {
 		if err := s.server.serverHTTPS.AppendCert(cert, key); err != nil {
 			return err
 		}
-		return http.ListenAndServeTLS("localhost:8081", "", "", ws.Upgrade)
+		return http.ListenAndServeTLS("localhost:8084", "", "", ws.Upgrade)
 	})
 
 	return s.eg.Wait()

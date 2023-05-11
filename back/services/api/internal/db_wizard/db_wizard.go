@@ -86,7 +86,7 @@ func GetUsersList(id int) ([]models.User, error) {
 
 	users := make([]models.User, 0)
 
-	query := db.conn.Rebind(`SELECT id, first_name, second_name, third_name from "user" as u
+	query := db.conn.Rebind(`SELECT id, first_name, second_name, third_name, photo from "user" as u
          where not
              (u.id in (select user_1 from dialog where user_2 = ?)
             OR u.id in (select user_2 from dialog where user_1 = ?))
@@ -104,6 +104,7 @@ func GetUsersList(id int) ([]models.User, error) {
 			Logger.Error(err.Error())
 			return nil, err
 		}
+		user.FullName = user.SecondName + " " + user.FirstName + " " + user.ThirdName
 		users = append(users, user)
 	}
 
@@ -121,9 +122,9 @@ func GetDialogsList(id int) ([]models.Dialog, error) {
 
 	dials := make([]models.DialogDB, 0)
 
-	query := db.conn.Rebind(`SELECT dialog.id, user_1, user_2, text as last_mes_text, is_read, last_mes_sender FROM dialog
+	query := db.conn.Rebind(`SELECT dialog.id, user_1, user_2, text as last_mes_text, is_read, last_mes_sender, time FROM dialog
     JOIN "message" m on m.id = dialog.last_mes
-WHERE user_1 = ? or user_2 = ?;`)
+WHERE user_1 = ? or user_2 = ? ORDER BY time DESC;`)
 
 	rows, err := db.conn.Queryx(query, id, id)
 	if err != nil {
@@ -148,6 +149,7 @@ WHERE user_1 = ? or user_2 = ?;`)
 		dialog := models.Dialog{}
 		dialog.Id = d.Id
 		dialog.LastMes = d.LastMes
+		dialog.Time = d.Time
 
 		if d.LastMesSender == id {
 			dialog.AreYouLastMesSender = true
@@ -196,6 +198,7 @@ func GetUserInfoById(userId int) (models.User, error) {
 		Logger.Error(err.Error())
 		return user, err
 	}
+	user.FullName = user.SecondName + " " + user.FirstName + " " + user.ThirdName
 
 	return user, nil
 
@@ -348,6 +351,48 @@ func UpdateLastMesInDialog(dialogId int, mesId int, senderId int) error {
 
 	query := db.conn.Rebind(`UPDATE dialog SET last_mes = ?, last_mes_sender = ? WHERE id = ?;`)
 	_, err = db.conn.Queryx(query, mesId, senderId, dialogId)
+	if err != nil {
+		Logger.Error(err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func CreateDialog(myId int, friendId int) (int, error) {
+	db, err := NewConnect()
+	if err != nil {
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
+		return 0, err
+	}
+
+	defer func() { Logger.Debug(db.Quit()) }()
+
+	query := db.conn.Rebind(`INSERT INTO dialog (user_1, user_2) VALUES (?,?) RETURNING id;`)
+
+	var dId int
+	err = db.conn.QueryRow(query, myId, friendId).Scan(&dId)
+	if err != nil {
+		Logger.Error(err.Error())
+		return 0, err
+	}
+
+	return dId, nil
+}
+
+func ReadDialog(dialogId int) error {
+	db, err := NewConnect()
+	if err != nil {
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
+		return err
+	}
+
+	defer func() { Logger.Debug(db.Quit()) }()
+
+	query := db.conn.Rebind(`UPDATE message SET is_read = true WHERE id = (SELECT m.id FROM dialog
+    JOIN "message" m on m.id = dialog.last_mes
+WHERE dialog.id=?);`)
+	_, err = db.conn.Queryx(query, dialogId)
 	if err != nil {
 		Logger.Error(err.Error())
 		return err
