@@ -11,6 +11,7 @@ import (
 	"messenger/services/api/internal/db_wizard"
 	helpers "messenger/services/api/pkg/helpers/http"
 	. "messenger/services/api/pkg/helpers/logger"
+	"messenger/services/api/pkg/helpers/utils"
 )
 
 // UserToken map with session session_token:user_id
@@ -53,7 +54,7 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 		return
 	}
 
-	user, err := db_wizard.Auth(authData.Mail, authData.Pas)
+	user, err := db_wizard.Auth(authData.Mail, utils.GetSHA256(authData.Pas, s.configuration.Salt))
 	if err != nil {
 		Logger.Error("Failed to do sql req. Reason: ", err.Error())
 		if err == sql.ErrNoRows {
@@ -73,6 +74,7 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 		FullName: user.SecondName + " " + user.FirstName + " " + user.ThirdName,
 		Photo:    user.Photo,
 	}
+
 	helpers.Respond(ctx, usr, http.StatusOK)
 }
 

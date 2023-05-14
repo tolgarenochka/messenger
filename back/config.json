@@ -1,0 +1,10 @@
+{
+  "path_to_server_crt": "/server.crt",
+  "path_to_server_key": "/server.key",
+  "ip": "localhost",
+  "http_port": "5432",
+  "https_port": "5433",
+  "ws_port": "5434",
+  "wss_port": "5435",
+  "salt": "diplop"
+}

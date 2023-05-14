@@ -2,17 +2,20 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"github.com/fasthttp/router"
 	http "github.com/valyala/fasthttp"
 	"golang.org/x/sync/errgroup"
+	"messenger/services/api/pkg/helpers/models"
 )
 
 type Server struct {
 	eg  *errgroup.Group
 	ctx context.Context
 
-	router *router.Router
-	server *HTTPServer
+	router        *router.Router
+	server        *HTTPServer
+	configuration models.Configuration
 }
 
 func (s *Server) Init() {
@@ -26,7 +29,7 @@ type HTTPServer struct {
 	serverHTTPS *http.Server
 }
 
-func NewServer() *Server {
+func NewServer(configuration models.Configuration) *Server {
 	return &Server{
 		server: &HTTPServer{
 			serverHTTP: &http.Server{
@@ -36,30 +39,31 @@ func NewServer() *Server {
 				Name: "https handlers",
 			},
 		},
+		configuration: configuration,
 	}
 }
 
-func (s *Server) Run(ctx context.Context, cert, key string) error {
+func (s *Server) Run(ctx context.Context) error {
 	s.eg, s.ctx = errgroup.WithContext(ctx)
 	s.eg.Go(func() error {
-		return s.server.serverHTTP.ListenAndServe("localhost:8080")
+		return s.server.serverHTTP.ListenAndServe(fmt.Sprintf("%s:%s", s.configuration.IP, s.configuration.HTTPPort))
 	})
 	s.eg.Go(func() error {
-		if err := s.server.serverHTTPS.AppendCert(cert, key); err != nil {
+		if err := s.server.serverHTTPS.AppendCert(s.configuration.PathToServerCrt, s.configuration.PathToServerKey); err != nil {
 			return err
 		}
-		return s.server.serverHTTPS.ListenAndServeTLS("localhost:8083", "", "")
+		return s.server.serverHTTPS.ListenAndServeTLS(fmt.Sprintf("%s:%s", s.configuration.IP, s.configuration.HTTPSPort), "", "")
 	})
 
 	ws := InitWebSocketServer()
 	s.eg.Go(func() error {
-		return http.ListenAndServe("localhost:8081", ws.Upgrade)
+		return http.ListenAndServe(fmt.Sprintf("%s:%s", s.configuration.IP, s.configuration.WSPort), ws.Upgrade)
 	})
 	s.eg.Go(func() error {
-		if err := s.server.serverHTTPS.AppendCert(cert, key); err != nil {
+		if err := s.server.serverHTTPS.AppendCert(s.configuration.PathToServerCrt, s.configuration.PathToServerKey); err != nil {
 			return err
 		}
-		return http.ListenAndServeTLS("localhost:8084", "", "", ws.Upgrade)
+		return http.ListenAndServeTLS(fmt.Sprintf("%s:%s", s.configuration.IP, s.configuration.WSSPort), "", "", ws.Upgrade)
 	})
 
 	return s.eg.Wait()
