@@ -22,7 +22,3 @@ type DialogDB struct {
 	IsRead        bool      `json:"is_read" db:"is_read"`
 	Time          time.Time `json:"time" db:"time"`
 }
-
-func (d *Dialog) UpdateLastMes(mes string) {
-	d.LastMes = mes
-}

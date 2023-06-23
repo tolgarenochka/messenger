@@ -16,13 +16,13 @@ type TimeStruct struct {
 	Id    int    `json:"id"`
 }
 
-// register a connection when it's open
+// регистрация вебсокет-соединения
 func RegisterConn(c *websocket.Conn) {
 	UnauthorizedWebsockets[c.ID()] = c
 	Logger.Debugf("Client %s connected", c.RemoteAddr())
 }
 
-// remove the connection when receiving the close
+// удаление вебсокет-соединения
 func RemoveConn(c *websocket.Conn, err error) {
 	if err != nil {
 		Logger.Info("Close websocket connection. Reason: ", err.Error())
@@ -46,7 +46,7 @@ func RemoveConn(c *websocket.Conn, err error) {
 	_ = c.Close()
 }
 
-// handle the pong message
+// обработка понг-сообщения
 func OnPong(c *websocket.Conn, data []byte) {
 	if len(data) == 8 {
 		n := binary.BigEndian.Uint64(data)
@@ -56,6 +56,7 @@ func OnPong(c *websocket.Conn, data []byte) {
 	}
 }
 
+// обработка события получения сообщения
 func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 	var newEvent WSEvent
 
@@ -93,6 +94,7 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 		} else {
 			Logger.Debug("User already registered!")
 		}
+		// обработка сообщения на событие прочтения диалога
 	case ReadDialog:
 		Logger.Info("Read dialog")
 
@@ -101,7 +103,7 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 			Logger.Error("Failed to do sql req. Reason: ", err.Error())
 			return
 		}
-
+		// обработка сообщения на событие отправки сообщения
 	case SendMessage:
 		Logger.Info("Send mes")
 
@@ -109,8 +111,10 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 		var flag = false
 		var a WSEvent
 
+		// в случае, если диалог новый (еще не записан в базу данных)
 		if newEvent.MsgData.DialogId == 0 {
 			flag = true
+			// создание диалога
 			dId, err = db_wizard.CreateDialog(userId, newEvent.MsgData.FriendId)
 			if err != nil {
 				Logger.Error("Failed to send mes to ws. Reason: ", err.Error())
@@ -127,6 +131,7 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 			newEvent.MsgMetaData.FriendPhoto = userInf.Photo
 			newEvent.MsgMetaData.FriendFullName = userInf.FullName
 
+			// отправка клиентской части идентификатор созданного диалога
 			a := TimeStruct{Event: "dialogId", Id: dId}
 
 			jsn, err := json.Marshal(a)
@@ -135,10 +140,12 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 				Logger.Error("Failed to send mes to ws. Reason: ", err.Error())
 				return
 			}
+			// в случае, если сообщение отправлено в рамках уже существующего диалога
 		} else {
 			dId = newEvent.MsgData.DialogId
 		}
 
+		// формирование информации о сообщении для записи его в базу данных
 		user1, user2, err := db_wizard.GetDialogParticipants(dId)
 		if err != nil {
 			Logger.Error("Failed to do sql req. Reason: ", err.Error())
@@ -157,20 +164,22 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 		mes.Time = newEvent.MsgData.Time
 		mes.Sender = userId
 
-		// write message to db
+		// запись собщения в базу данных
 		mesId, err := db_wizard.PostMessage(mes, dId)
 		if err != nil {
 			Logger.Error("Failed to do sql req. Reason: ", err.Error())
 			return
 		}
 
-		// update last message in db
+		// обновления поля "последнее сообщение" в таблице диалогов
 		err = db_wizard.UpdateLastMesInDialog(dId, mesId, mes.Sender)
 		if err != nil {
 			Logger.Error("Failed to do sql req. Reason: ", err.Error())
 			return
 		}
 
+		// проверка на то, открыто ли вебсокет-соединение у получаетля сообщения
+		// если оно открыто (пользователь в сети), то отправляем получателю вебсокет-сообщение
 		for token, id := range UserToken {
 			if id == newEvent.MsgData.FriendId {
 				ws, ok := TokenWebSockets[token]
@@ -191,8 +200,6 @@ func OnMessage(c *websocket.Conn, isBinary bool, data []byte) {
 				}
 			}
 		}
-
-		//c.Write([]byte("seiuthkd"))
 
 	}
 

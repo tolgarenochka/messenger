@@ -18,7 +18,6 @@ import (
 var Configuration models.Configuration
 
 func init() {
-
 	pwd, err := os.Getwd()
 	if err != nil {
 		fmt.Println(err)
@@ -41,6 +40,8 @@ func init() {
 
 func main() {
 	Logger.Info("Mess running")
+	//
+	//fmt.Println(utils.GetSHA256("12345", Configuration.Salt))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
 	defer cancel()

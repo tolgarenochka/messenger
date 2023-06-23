@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	cors "github.com/adhityaramadhanus/fasthttpcors"
 	"github.com/fasthttp/router"
 	http "github.com/valyala/fasthttp"
@@ -12,6 +13,7 @@ import (
 	helpers "messenger/services/api/pkg/helpers/http"
 	. "messenger/services/api/pkg/helpers/logger"
 	"messenger/services/api/pkg/helpers/utils"
+	"strconv"
 )
 
 // UserToken map with session session_token:user_id
@@ -28,6 +30,7 @@ type UserInfo struct {
 	Photo    string `json:"photo"`
 }
 
+// функция генерации токена
 func GenerateSecureToken(length int) string {
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {
@@ -43,6 +46,7 @@ func (s *Server) UserRouter(r *router.Router, c *cors.CorsHandler) {
 	r.POST("/logout", c.CorsMiddleware(s.logout))
 }
 
+// обработка запроса на авторизацию
 func (s *Server) auth(ctx *http.RequestCtx) {
 	Logger.Info("Auth")
 	authData := AuthData{}
@@ -65,6 +69,7 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 		return
 	}
 
+	// генерация токена пользователю
 	token := GenerateSecureToken(20)
 
 	UserToken[token] = user.Id
@@ -78,6 +83,7 @@ func (s *Server) auth(ctx *http.RequestCtx) {
 	helpers.Respond(ctx, usr, http.StatusOK)
 }
 
+// обработка запроса на выход из системы
 func (s *Server) logout(ctx *http.RequestCtx) {
 	Logger.Info("Log Out")
 
@@ -88,16 +94,16 @@ func (s *Server) logout(ctx *http.RequestCtx) {
 		return
 	}
 
+	// удаление токена пользователя
 	delete(UserToken, token)
 	helpers.Respond(ctx, "un auth", http.StatusOK)
 }
 
-// NewPhoto TODO: front gives us id? or token for getting id from UserToken?
 type NewPhoto struct {
 	Photo string `json:"photo"`
-	Id    int    `json:"id"`
 }
 
+// обработка запроса на обновление фото профиля
 func (s *Server) updatePhoto(ctx *http.RequestCtx) {
 	Logger.Info("Update photo")
 
@@ -108,30 +114,25 @@ func (s *Server) updatePhoto(ctx *http.RequestCtx) {
 		return
 	}
 
-	newPhoto := NewPhoto{}
-
-	if err := json.Unmarshal(ctx.PostBody(), &newPhoto); err != nil {
-		Logger.Error("Failed unmarshal user data. Reason: ", err.Error())
-
-		helpers.Respond(ctx, "Unmarshal error", http.StatusBadRequest)
-		return
-	}
-
-	count, err := db_wizard.UpdatePhoto(newPhoto.Photo, newPhoto.Id)
+	fh, err := ctx.FormFile("photo")
 	if err != nil {
-		Logger.Error("Failed to do sql req. Reason: ", err.Error())
-		helpers.Respond(ctx, "sql error", http.StatusBadRequest)
-		return
-	}
-	if count == 0 {
-		helpers.Respond(ctx, "can't update photo", http.StatusBadRequest)
+		fmt.Errorf("error get file: %s", err)
+		helpers.Respond(ctx, "can't get file", http.StatusBadRequest)
 		return
 	}
 
-	helpers.Respond(ctx, "photo was successfully updated", http.StatusOK)
+	if err := http.SaveMultipartFile(fh, fmt.Sprintf("/Users/sonyatolgarenko/mess/public/user_photo/user%s.jpeg",
+		strconv.Itoa(userId))); err != nil {
+		fmt.Errorf("error save file: %s", err)
+		helpers.Respond(ctx, "can't save file", http.StatusBadRequest)
+		return
+	}
+
+	helpers.Respond(ctx, "ok", http.StatusOK)
 	return
 }
 
+// обработка запроса на получение списка пользователей
 func (s *Server) usersList(ctx *http.RequestCtx) {
 	Logger.Info("Get users list")
 

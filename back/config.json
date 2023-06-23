@@ -2,9 +2,9 @@
   "path_to_server_crt": "/server.crt",
   "path_to_server_key": "/server.key",
   "ip": "localhost",
-  "http_port": "5432",
-  "https_port": "5433",
-  "ws_port": "5434",
-  "wss_port": "5435",
+  "http_port": "8080",
+  "https_port": "8083",
+  "ws_port": "8081",
+  "wss_port": "8084",
   "salt": "diplop"
 }

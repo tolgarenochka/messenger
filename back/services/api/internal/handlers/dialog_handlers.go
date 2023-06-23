@@ -15,9 +15,11 @@ func (s *Server) DialogRouter(r *router.Router, c *cors.CorsHandler) {
 	r.GET("/dialogList", c.CorsMiddleware(s.dialogList))
 }
 
+// обработка запроса на получение списка диалогов текущего пользователя
 func (s *Server) dialogList(ctx *http.RequestCtx) {
 	Logger.Info("Get dialog list")
 
+	// авторизован ли пользователь?
 	token := string(ctx.Request.Header.Peek("Authorization"))
 	userId := IsAuth(token)
 	if userId == -1 {
@@ -25,6 +27,7 @@ func (s *Server) dialogList(ctx *http.RequestCtx) {
 		return
 	}
 
+	// получение списка диалогов
 	dialogs, err := db_wizard.GetDialogsList(userId)
 	if err != nil {
 		Logger.Error("Failed to do sql req. Reason: ", err.Error())

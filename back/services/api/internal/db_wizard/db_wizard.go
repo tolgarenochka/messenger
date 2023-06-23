@@ -15,6 +15,7 @@ type Store struct {
 	conn   *sqlx.DB
 }
 
+// функция открытия подключения к БД
 func NewConnect() (*Store, error) {
 	conn, err := sqlx.ConnectContext(context.Background(), "pgx", "postgresql://localhost:5432/postgres")
 	if err != nil {
@@ -24,10 +25,12 @@ func NewConnect() (*Store, error) {
 	return &Store{conn: conn}, nil
 }
 
+// функция акрытия подключения к бд
 func (s *Store) Quit() error {
 	return s.conn.Close()
 }
 
+// запрос в БД на авторизацию
 func Auth(mail string, pas string) (models.User, error) {
 	db, err := NewConnect()
 	if err != nil {
@@ -49,32 +52,7 @@ func Auth(mail string, pas string) (models.User, error) {
 	return user, nil
 }
 
-// UpdatePhoto TODO: photo format? is base64 ok for front?
-func UpdatePhoto(photo string, id int) (int64, error) {
-	db, err := NewConnect()
-	if err != nil {
-		Logger.Error("Failed connect to db. Reason: ", err.Error())
-		return 0, err
-	}
-
-	defer func() { Logger.Debug(db.Quit()) }()
-
-	query := db.conn.Rebind(`UPDATE "user" SET photo = ? WHERE id = ?;`)
-	res, err := db.conn.Exec(query, photo, id)
-	if err != nil {
-		Logger.Error("Failed connect to db. Reason: ", err.Error())
-		return 0, err
-	}
-
-	count, err := res.RowsAffected()
-	if err != nil {
-		Logger.Error("Failed connect to count result rows. Reason: ", err.Error())
-		return 0, err
-	}
-
-	return count, nil
-}
-
+// запрос в БД на получения списка пользователей, с кем еще нет диалога
 func GetUsersList(id int) ([]models.User, error) {
 	db, err := NewConnect()
 	if err != nil {
@@ -111,6 +89,7 @@ func GetUsersList(id int) ([]models.User, error) {
 	return users, nil
 }
 
+// запрос в БД на получение списка диалогов пользователя
 func GetDialogsList(id int) ([]models.Dialog, error) {
 	db, err := NewConnect()
 	if err != nil {
@@ -181,6 +160,7 @@ WHERE user_1 = ? or user_2 = ? ORDER BY time DESC;`)
 	return dialogs, nil
 }
 
+// запрос в БД на получение информации о пользователе по его id
 func GetUserInfoById(userId int) (models.User, error) {
 	db, err := NewConnect()
 	if err != nil {
@@ -204,6 +184,7 @@ func GetUserInfoById(userId int) (models.User, error) {
 
 }
 
+// запрос в БД на получение всех сообщений в диалоге
 func GetMessagesList(dialogId int, UserId int) ([]models.Message, error) {
 	db, err := NewConnect()
 	if err != nil {
@@ -261,6 +242,7 @@ message.dialog_id = d.id WHERE is_deleted = FALSE and d.id = ?
 
 }
 
+// запрос в БД на получение всех файлов, относящихся к выбранному сообщению
 func GetFilesList(mesId int64) ([]models.File, error) {
 	db, err := NewConnect()
 	if err != nil {
@@ -297,6 +279,7 @@ type Participants struct {
 	UserTwo int `db:"user_2"`
 }
 
+// запрос в БД на получение списка участников диалога по заданному id диалога
 func GetDialogParticipants(dialogId int) (int, int, error) {
 	dialog := Participants{}
 
@@ -318,6 +301,7 @@ func GetDialogParticipants(dialogId int) (int, int, error) {
 	return dialog.UserOne, dialog.UserTwo, nil
 }
 
+// запрос в БД на запись сообщения в таблицу сообщений
 func PostMessage(message models.MessageDB, dialogId int) (int, error) {
 	db, err := NewConnect()
 	if err != nil {
@@ -340,6 +324,7 @@ VALUES (DEFAULT, ?, ?, ?, DEFAULT, DEFAULT, ?, ?) RETURNING id;`)
 	return mesId, nil
 }
 
+// запрос в БД на обновление последнего сообщения в диалоге
 func UpdateLastMesInDialog(dialogId int, mesId int, senderId int) error {
 	db, err := NewConnect()
 	if err != nil {
@@ -359,6 +344,7 @@ func UpdateLastMesInDialog(dialogId int, mesId int, senderId int) error {
 	return nil
 }
 
+// запрос в БД на создание нового диалога
 func CreateDialog(myId int, friendId int) (int, error) {
 	db, err := NewConnect()
 	if err != nil {
@@ -380,6 +366,7 @@ func CreateDialog(myId int, friendId int) (int, error) {
 	return dId, nil
 }
 
+// запрос в БД на изменение статуса диалога (прочитано)
 func ReadDialog(dialogId int) error {
 	db, err := NewConnect()
 	if err != nil {
@@ -393,6 +380,27 @@ func ReadDialog(dialogId int) error {
     JOIN "message" m on m.id = dialog.last_mes
 WHERE dialog.id=?);`)
 	_, err = db.conn.Queryx(query, dialogId)
+	if err != nil {
+		Logger.Error(err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// запрос в БД на запись файла, принадлежащему выбранному сообщению
+func SaveFile(fileName string, userId int) error {
+	db, err := NewConnect()
+	if err != nil {
+		Logger.Error("Failed connect to db. Reason: ", err.Error())
+		return err
+	}
+
+	defer func() { Logger.Debug(db.Quit()) }()
+
+	query := db.conn.Rebind(`insert into file (mes_id, path, name) values 
+        ((select id from message where sender = ? order by time desc limit 1), ?, ?)`)
+	_, err = db.conn.Queryx(query, userId, "files/"+fileName, fileName)
 	if err != nil {
 		Logger.Error(err.Error())
 		return err
